@@ -46,7 +46,7 @@ PROG      = virtle
 BUGREPORT = https://github.com/DMBuce/virtle/issues
 URL       = https://github.com/DMBuce/virtle
 
-BINFILES         = bin/vm bin/vnet
+BINFILES         = bin/vm bin/vnet bin/macaddr
 BINFILES_INSTALL = $(BINFILES:bin/%=$(DESTDIR)$(bindir)/%)
 ETCFILES         = $(wildcard etc/*)
 ETCFILES_INSTALL = $(ETCFILES:etc/%=$(DESTDIR)$(sysconfdir)/%)
