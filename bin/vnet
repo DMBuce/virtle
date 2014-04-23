@@ -1,0 +1,60 @@
+#!/bin/bash
+
+prog="${0##*/}"
+virsh="virsh --connect qemu:///system"
+virt_install="virt-install --connect qemu:///system"
+default_network=default
+
+main() {
+	case "$1" in
+		edit|list|restart|start|stop)
+			"$@"
+		;;
+		*)
+			usage "$prog [edit|list|restart|start|stop] ..."
+		;;
+	esac
+}
+
+usage() {
+	die "Usage: %s" "$*"
+}
+
+die() {
+	message="$1"
+	shift
+	printf "$message\n" "$@"
+
+	exit 1
+}
+
+edit() {
+	network="${1-$default_network}"
+
+	$virsh net-edit "$network"
+}
+
+list() {
+	$virsh net-list --all
+}
+
+restart() {
+	stop "$@"
+	start "$@"
+}
+
+start() {
+	network="${1-$default_network}"
+
+	$virsh net-start "$network"
+}
+
+stop() {
+
+	network="${1-$default_network}"
+
+	$virsh net-destroy "$network"
+}
+
+main "$@"
+

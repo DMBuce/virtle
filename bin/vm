@@ -1,0 +1,185 @@
+#!/bin/bash
+
+prog="${0##*/}"
+virsh="virsh --connect qemu:///system"
+virt_install="virt-install --connect qemu:///system"
+
+main() {
+	case "$1" in
+		console|delete|edit|kill|list|new|restart|start|stop)
+			"$@"
+		;;
+		*)
+			usage "$prog [console|delete|edit|kill|list|new|restart|start|stop] ..."
+		;;
+	esac
+}
+
+usage() {
+	die "Usage: %s" "$*"
+}
+
+die() {
+	message="$1"
+	shift
+	printf "$message\n" "$@"
+
+	exit 1
+}
+
+prompt() {
+	printf "%s\n" "$*" >&2
+}
+
+err() {
+	message="$1"
+	shift
+	printf "$message\n" "$@"
+}
+
+console() {
+	name="$1"
+
+	if [[ -z "$name" ]]; then
+		usage "$prog console <name>"
+	fi
+
+	$virsh console "$name"
+}
+
+delete() {
+
+	name="$1"
+
+	if [[ -z "$name" ]]; then
+		usage "$prog delete <name>"
+	fi
+
+	$virsh destroy "$name"
+	$virsh undefine --remove-all-storage "$name"
+}
+
+edit() {
+	name="$1"
+
+	if [[ -z "$name" ]]; then
+		usage "$prog edit <name>"
+	fi
+
+	$virsh edit "$name"
+}
+
+kill() {
+	name="$1"
+
+	if [[ -z "$name" ]]; then
+		usage "$prog kill <name>"
+	fi
+
+	$virsh destroy --graceful "$name"
+}
+
+list() {
+	$virsh list --all
+}
+
+new() {
+	name="$1"
+	image="$2"
+
+	declare -i ram
+	declare -i disk
+	ram=0
+	disk=0
+	os=
+
+	if [[ -z "$name" || -z "$image" ]]; then
+		usage "$prog new <name> <image>"
+	elif [[ "$image" != /* ]]; then
+		image="$PWD/${image#./}"
+	fi
+
+	# get ram
+	while (( ! ram )); do
+		read -p "How much RAM should be allocated (in megabytes)? " ram
+	done
+
+	# get disk size
+	while (( ! disk )); do
+		read -p "How much disk should be allocated (in gigabytes)? " disk
+	done
+
+	# get os flavor
+	oses=( $(virt-install --os-variant=list | cut -d' ' -f1) )
+	prompt "What will the guest OS be?"
+	OLDPS3="$PS3"
+	PS3="Choose a number (1-${#oses[@]}): " 
+	select os in "${oses[@]}"
+	do
+		if [[ "$os" ]]; then
+			break
+		else
+			err "Invalid number"
+		fi
+	done
+	PS3="$OLDPS3"
+
+	# Minimum requirements are --name, --ram, guest storage (--disk,
+	# --filesystem or --nodisks), and an install option.
+	$virt_install \
+		--connect qemu:///system \
+		--virt-type kvm \
+		--name "$name" \
+		--cdrom "$image" \
+		--os-variant="$os" \
+		--ram "$ram" \
+		--disk /var/lib/libvirt/images/$name.qcow2,format=qcow2,size="$disk" \
+		--network network=default,mac="$(macaddr "$name")" \
+		--graphics=vnc,listen=0.0.0.0 \
+		--prompt
+
+	#virt-install \
+	#	--connect qemu:///system \
+	#	--virt-type kvm \
+	#	--name "$name" \
+	#	--ram 512 \
+	#	--disk path=/var/lib/libvirt/images/$name.img,size=8 \
+	#	--vnc \
+	#	--cdrom "$image" \
+	#	--os-type linux \
+	#	--network network=default,mac="$(macaddr "$name")" \
+	#	"${options[@]}"
+}
+
+restart() {
+	name="$1"
+
+	if [[ -z "$name" ]]; then
+		usage "$prog restart <name>"
+	fi
+
+	$virsh reboot "$name"
+}
+
+start() {
+	name="$1"
+
+	if [[ -z "$name" ]]; then
+		usage "$prog start <name>"
+	fi
+
+	$virsh start "$name"
+}
+
+stop() {
+	name="$1"
+
+	if [[ -z "$name" ]]; then
+		usage "$prog stop <name>"
+	fi
+
+	$virsh shutdown "$name"
+}
+
+main "$@"
+
