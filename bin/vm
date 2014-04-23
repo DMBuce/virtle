@@ -1,8 +1,27 @@
 #!/bin/bash
 
 prog="${0##*/}"
-virsh="virsh --connect qemu:///system"
-virt_install="virt-install --connect qemu:///system"
+config="@sysconfdir@/virtle.conf"
+
+# read in config
+declare -a VIRT_INSTALL_OPTS
+set -a
+if [[ -f "$config" ]]; then
+	. "$config"
+fi
+set +a
+
+# set defaults
+VM_DISK_FORMAT="${VM_DISK_FORMAT-qcow2}"
+VM_DISK_DIR="${VM_DISK_DIR-/var/lib/libvirt/images}"
+VM_DELETE_DISK="${VM_DELETE_DISK-1}"
+(( "${#VIRT_INSTALL_OPTS[@]}" )) || VIRT_INSTALL_OPTS=()
+VNET_DEFAULT="${VNET_DEFAULT-default}"
+
+#virsh="virsh --connect qemu:///system"
+#virt_install="virt-install --connect qemu:///system"
+virsh="virsh"
+virt_install="virt-install"
 
 main() {
 	case "$1" in
@@ -56,7 +75,12 @@ delete() {
 	fi
 
 	$virsh destroy "$name"
-	$virsh undefine --remove-all-storage "$name"
+
+	if (( VM_DELETE_DISK )); then
+		$virsh undefine --remove-all-storage "$name"
+	else
+		$virsh undefine "$name"
+	fi
 }
 
 edit() {
@@ -87,10 +111,10 @@ new() {
 	name="$1"
 	image="$2"
 
-	declare -i ram
-	declare -i disk
-	ram=0
-	disk=0
+	declare -i ramsize
+	declare -i disksize
+	ramsize=0
+	disksize=0
 	os=
 
 	if [[ -z "$name" || -z "$image" ]]; then
@@ -100,13 +124,13 @@ new() {
 	fi
 
 	# get ram
-	while (( ! ram )); do
-		read -p "How much RAM should be allocated (in megabytes)? " ram
+	while (( ! ramsize )); do
+		read -p "How much RAM should be allocated (in megabytes)? " ramsize
 	done
 
 	# get disk size
-	while (( ! disk )); do
-		read -p "How much disk should be allocated (in gigabytes)? " disk
+	while (( ! disksize )); do
+		read -p "How much disk should be allocated (in gigabytes)? " disksize
 	done
 
 	# get os flavor
@@ -127,28 +151,14 @@ new() {
 	# Minimum requirements are --name, --ram, guest storage (--disk,
 	# --filesystem or --nodisks), and an install option.
 	$virt_install \
-		--connect qemu:///system \
-		--virt-type kvm \
 		--name "$name" \
 		--cdrom "$image" \
 		--os-variant="$os" \
-		--ram "$ram" \
-		--disk /var/lib/libvirt/images/$name.qcow2,format=qcow2,size="$disk" \
-		--network network=default,mac="$(macaddr "$name")" \
-		--graphics=vnc,listen=0.0.0.0 \
-		--prompt
-
-	#virt-install \
-	#	--connect qemu:///system \
-	#	--virt-type kvm \
-	#	--name "$name" \
-	#	--ram 512 \
-	#	--disk path=/var/lib/libvirt/images/$name.img,size=8 \
-	#	--vnc \
-	#	--cdrom "$image" \
-	#	--os-type linux \
-	#	--network network=default,mac="$(macaddr "$name")" \
-	#	"${options[@]}"
+		--ram "$ramsize" \
+		--disk "$VM_DISK_DIR/$name.$VM_DISK_FORMAT,format=$VM_DISK_FORMAT,size=$disksize" \
+		--network "network=$VNET_DEFAULT,mac=$(macaddr "$name")" \
+		--prompt \
+		"${VIRT_INSTALL_OPTS[@]}"
 }
 
 restart() {

@@ -1,9 +1,27 @@
 #!/bin/bash
 
 prog="${0##*/}"
-virsh="virsh --connect qemu:///system"
-virt_install="virt-install --connect qemu:///system"
-default_network=default
+config="@sysconfdir@/virtle.conf"
+
+# read in config
+declare -a VIRT_INSTALL_OPTS
+set -a
+if [[ -f "$config" ]]; then
+	. "$config"
+fi
+set +a
+
+# set defaults
+VM_DISK_FORMAT="${VM_DISK_FORMAT-qcow2}"
+VM_DISK_DIR="${VM_DISK_DIR-/var/lib/libvirt/images}"
+VM_DELETE_DISK="${VM_DELETE_DISK-1}"
+(( "${#VIRT_INSTALL_OPTS[@]}" )) || VIRT_INSTALL_OPTS=()
+VNET_DEFAULT="${VNET_DEFAULT-default}"
+
+#virsh="virsh --connect qemu:///system"
+#virt_install="virt-install --connect qemu:///system"
+virsh="virsh"
+virt_install="virt-install"
 
 main() {
 	case "$1" in
@@ -29,7 +47,7 @@ die() {
 }
 
 edit() {
-	network="${1-$default_network}"
+	network="${1-$VNET_DEFAULT}"
 
 	$virsh net-edit "$network"
 }
@@ -44,14 +62,13 @@ restart() {
 }
 
 start() {
-	network="${1-$default_network}"
+	network="${1-$VNET_DEFAULT}"
 
 	$virsh net-start "$network"
 }
 
 stop() {
-
-	network="${1-$default_network}"
+	network="${1-$VNET_DEFAULT}"
 
 	$virsh net-destroy "$network"
 }
