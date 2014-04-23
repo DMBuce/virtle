@@ -1,0 +1,33 @@
+Virtle README
+=============
+
+libvirt wrapped in a shell.
+
+Description
+-----------
+
+Virtle is a small collection of bash scripts used to make managing libvirt VMs
+more intuitive. A configuration file is used to provide options for many of the
+difficult-to-remember `virsh` and `virt-install` flags.
+
+Installation
+------------
+
+To install, edit the variables at the top of the Makefile to match your system
+and run
+
+	make install
+
+The Makefile also supports DESTDIR for staged installs.
+
+	make DESTDIR=/tmp/staging install
+
+//Usage
+//-----
+//
+//Refer to the `--help` output for each utility.
+//
+
+/////
+vim: set syntax=asciidoc ts=4 sw=4 noet:
+/////
