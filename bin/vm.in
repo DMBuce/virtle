@@ -4,6 +4,7 @@ prog="${0##*/}"
 config="@sysconfdir@/virtle.conf"
 
 # read in config
+declare -i VM_DELETE_DISK
 declare -a VIRT_INSTALL_OPTS
 set -a
 if [[ -f "$config" ]]; then
@@ -14,7 +15,7 @@ set +a
 # set defaults
 VM_DISK_FORMAT="${VM_DISK_FORMAT-qcow2}"
 VM_DISK_DIR="${VM_DISK_DIR-/var/lib/libvirt/images}"
-VM_DELETE_DISK="${VM_DELETE_DISK-1}"
+VM_DELETE_DISK="${VM_DELETE_DISK-0}"
 (( "${#VIRT_INSTALL_OPTS[@]}" )) || VIRT_INSTALL_OPTS=()
 VNET_DEFAULT="${VNET_DEFAULT-default}"
 
