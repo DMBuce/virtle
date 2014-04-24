@@ -22,11 +22,15 @@ The Makefile also supports DESTDIR for staged installs.
 
 	make DESTDIR=/tmp/staging install
 
-//Usage
-//-----
-//
-//Refer to the `--help` output for each utility.
-//
+When installed with the default Makefile, the main configuration file will be
+located at +/usr/local/etc/virtle.conf+. The default config has comments
+explaining the purpose of each option.
+
+Usage
+-----
+
+Run each utility without arguments to see a short usage summary.
+
 
 /////
 vim: set syntax=asciidoc ts=4 sw=4 noet:
